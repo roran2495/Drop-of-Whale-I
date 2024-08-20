@@ -1,0 +1,162 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Angle1Controller : MonoBehaviour
+{
+    public GameObject doorToAngle5;
+    public GameObject leftArrow;
+    public GameObject rightArrow;
+    public GameObject backArrow;
+    public GameObject darkness;
+    public GameObject curtain;
+    public bool flagCurtain;    // unuse : false   ;     use: true
+    public GameObject switcher;   
+    public bool flagSwitcher;   // turn on : false ;      turn off : true
+    public GameObject pillow1;
+    public GameObject pillow2;
+    public GameObject broom1;
+    public GameObject broom2;
+    public GameObject carpet1;
+    public GameObject carpet2;
+    public GameObject letter1;
+    public GameObject letter2;
+    public GameObject phone1;
+    public GameObject phone2;
+    public GameObject shoeCabinet1;
+    public GameObject shoeCabinet2;
+    // Start is called before the first frame update
+    void Start()
+    {
+        flagCurtain = false;
+        flagSwitcher = false;
+        pillow1.SetActive(true);
+        pillow2.SetActive(false);
+        broom1.SetActive(true);
+        broom2.SetActive(false);
+        carpet1.SetActive(true);
+        carpet2.SetActive(false);
+        letter1.SetActive(true);
+        letter2.SetActive(false);
+        phone1.SetActive(false);
+        shoeCabinet.SetActive(false);
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        // 保证是触发视图1跳转
+        if (Camera.main.transform.position.x == 0 && Camera.main.transform.position.y == 0)
+        {
+            // 检测触摸输入或鼠标点击
+            if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began || Input.GetMouseButtonDown(0))
+            {
+                // 获取触摸位置或鼠标点击位置
+                Vector3 touchPosition = Input.touchCount > 0 ? Input.GetTouch(0).position : Input.mousePosition;
+                Vector3 worldTouchPosition = Camera.main.ScreenToWorldPoint(touchPosition);
+                // 将触摸位置的 Z 值设置为场景的 Z 值
+                worldTouchPosition.z = doorToAngle5.transform.position.z;
+
+                // 从视角1到视角5
+                if (doorToAngle5.activeSelf && doorToAngle5.GetComponent<Collider2D>().bounds.Contains(worldTouchPosition))
+                {
+                    Debug.Log("5->1");
+                    Camera.main.transform.position = new Vector3(0, 15, -10);
+                    leftArrow.SetActive(!leftArrow.activeSelf);
+                    rightArrow.SetActive(!rightArrow.activeSelf);
+                    backArrow.SetActive(!backArrow.activeSelf);
+                }
+                // 点击窗帘 ： 不使用or使用
+                if (curtain.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition) && !leftArrow.GetComponent<CircleCollider2D>().bounds.Contains(worldTouchPosition))
+                {
+                    Debug.Log("点击窗帘");
+                    SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+                    Sprite newSprite = Resources.Load<Sprite>("angle1/angle1-1");;
+                    if (!flagCurtain) // unuse -> use
+                    {
+                        newSprite = Resources.Load<Sprite>("angle1/angle1-2");
+                    }
+                    flagCurtain = !flagCurtain;
+                    spriteRenderer.sprite = newSprite; 
+                }
+                // 点击开关：打开or关闭
+                if (switcher.activeSelf && switcher.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition))
+                {
+                    Debug.Log("点击开关");
+                    flagSwitcher = !flagSwitcher;
+                }
+                if (!letter2.activeSelf && !phone.activeSelf && !shoeCabinet.activeSelf)
+                {
+                    // 窗帘使用+开关打开：黑暗效果
+                    darkness.SetActive(flagCurtain && flagSwitcher);
+                }
+                
+                if (pillow1.activeSelf)
+                {
+                    // 点击抱枕1 ：移动（显示抱枕2）
+                    if (pillow1.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition) || letter1.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition))
+                    {
+                        pillow1.SetActive(!pillow1.activeSelf);
+                        pillow2.SetActive(!pillow2.activeSelf);
+                    }
+                } else {
+                    // 点击信件 ：显示信件
+                    if (letter1.activeSelf && letter1.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition))
+                    {
+                        darkness.SetActive(true);
+                        letter2.SetActive(!letter2.activeSelf);
+                        // 禁用其他对象的碰撞器
+                        DisableOtherColliders(letter2);
+                    }
+                }
+                // 点击抱枕2 ：移动（显示抱枕1）
+                if (pillow2.activeSelf && pillow2.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition))
+                {
+                    pillow1.SetActive(!pillow1.activeSelf);
+                    pillow2.SetActive(!pillow2.activeSelf);
+                }
+                // 点击扫把1 ：拆卸（显示扫把2）
+                // 点击地毯1 ：获取钥匙（显示地毯2）
+                
+                // 点击信件外 ：取消特写
+                if (letter2.activeSelf && !letter2.GetComponent<PolygonCollider2D>().bounds.Contains(worldTouchPosition))
+                {
+                    darkness.SetActive(flagCurtain && flagSwitcher);
+                    letter2.SetActive(!letter2.activeSelf);
+                    // 启用其他对象的碰撞器
+                    EnableOtherColliders(letter2);
+                }
+                // 点击电话 ： 显示电话，实现拨号
+          
+                // 点击电话外 ：取消特写
+                // 点击鞋柜 ：显示鞋柜
+                // 点击鞋柜外 ：取消特写
+            }
+        }
+    }
+    void DisableOtherColliders(GameObject currentGameObject)
+    {
+        // 获取场景中所有的Collider组件
+        Collider2D[] colliders = FindObjectsOfType<Collider2D>();
+        
+        // 遍历所有Collider组件，禁用除了特写对象以外的所有其他对象的碰撞器
+        foreach (Collider2D collider in colliders)
+        {
+            if (collider.gameObject != currentGameObject)
+            {
+                collider.enabled = false;
+            }
+        }
+    }
+    void EnableOtherColliders(GameObject currentGameObject)
+    {
+        // 获取场景中所有的Collider组件
+        Collider2D[] colliders = FindObjectsOfType<Collider2D>();
+
+        // 遍历所有Collider组件，禁用除了特写对象以外的所有其他对象的碰撞器
+        foreach (Collider2D collider in colliders)
+        {
+            collider.enabled = true;
+        }
+    }
+}
